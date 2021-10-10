@@ -1,0 +1,13 @@
+# mint frontend
+
+for dev, place this required .env file at the base of your directory:
+
+```
+REACT_APP_CANDY_MACHINE_CONFIG=Ckm7CnjKHFs1GEiBFuUdvbfm9xsyHC4DzXLWXt3Qwa94
+REACT_APP_CANDY_MACHINE_ID=3L3AKQ9rnYrn7QpgwGAeJY9s4CJdQSMBMKKTKRBMgt6J
+REACT_APP_TREASURY_ADDRESS=CmfEZTJvr2DqYrqu9RDwkCkw6RCQLCjiKbSUdoJiJH7U
+REACT_APP_CANDY_START_DATE=1633233600
+
+REACT_APP_SOLANA_NETWORK=devnet
+REACT_APP_SOLANA_RPC_HOST=https://explorer-api.devnet.solana.com
+```

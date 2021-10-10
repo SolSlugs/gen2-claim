@@ -1,0 +1,70 @@
+$primary: #9AFF5D;
+@import "~bulma/bulma.sass";
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+body::-webkit-scrollbar {
+    display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+body {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+}
+
+.Aligner {
+    display: flex;
+    text-align: right;
+    align-items: center;
+    min-height: 24em;
+    justify-content: center;
+    height: 100vh;
+    width: 100vw;
+}
+
+.Aligner-item {
+    flex: 1;
+}
+
+.Aligner-item--top {
+    align-self: flex-start;
+}
+
+.Aligner-item--bottom {
+    align-self: flex-end;
+}
+
+.Aligner-item--fixed {
+    flex: none;
+    max-width: 50%;
+}
+
+.App {
+    text-align: center;
+}
+
+.mint-button {
+    float: right;
+}
+
+.home-link {
+    position: absolute;
+    margin-left: 2ch;
+    margin-top: 1ch;
+}
+
+.mint-container {
+    margin-top: -3.5rem;
+    padding: 3.5rem 1rem 1rem 1rem;
+    background-size: contain;
+    background-position: left;
+    background-repeat: no-repeat;
+    height: 22rem;
+    width: 35.59rem;
+}
+
+.logo {
+    width: 12rem;
+    float: right;
+    margin-bottom: 1.5rem;
+}
