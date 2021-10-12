@@ -6,8 +6,12 @@ body {
     font-size: 28px;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    background-color: #582CD8;
-    background: linear-gradient(135deg, rgba(88,44,216,1) 0%, rgba(0,0,0,1) 100%);
+    background-color: #582cd8;
+    background: linear-gradient(
+        135deg,
+        rgba(88, 44, 216, 1) 0%,
+        rgba(0, 0, 0, 1) 100%
+    );
     color: #ffffff;
 }
 

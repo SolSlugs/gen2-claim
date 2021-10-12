@@ -213,11 +213,7 @@ const Home = (props: HomeProps) => {
                         Total Supply: 10000
                     </p>
                 )}
-                {!wallet && (
-                    <p className="has-text-white is-size-4">
-                        &nbsp;
-                    </p>
-                )}
+                {!wallet && <p className="has-text-white is-size-4">&nbsp;</p>}
                 {!wallet ? (
                     <ConnectButton
                         style={{ marginTop: "1rem" }}
