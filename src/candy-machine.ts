@@ -1,6 +1,19 @@
 import * as anchor from "@project-serum/anchor";
+import * as BufferLayout from '@solana/buffer-layout';
+import {
+    PublicKey,
+    TransactionInstruction,
+    SignatureStatus,
+} from '@solana/web3.js';
 
-import { MintLayout, TOKEN_PROGRAM_ID, Token } from "@solana/spl-token";
+import BN from 'bn.js';
+
+import {
+    MintLayout,
+    TOKEN_PROGRAM_ID,
+    Token,
+    u64,
+} from "@solana/spl-token";
 
 export const CANDY_MACHINE_PROGRAM = new anchor.web3.PublicKey(
     "cndyAnrLdpjq1Ssp1z8xxDsB8dxe7u4HL5Nxi2K5WXZ"
@@ -28,97 +41,120 @@ interface CandyMachineState {
     goLiveDate: Date;
 }
 
-export const awaitTransactionSignatureConfirmation = async (
-    txid: anchor.web3.TransactionSignature,
-    timeout: number,
-    connection: anchor.web3.Connection,
-    commitment: anchor.web3.Commitment = "recent",
-    queryStatus = false
-): Promise<anchor.web3.SignatureStatus | null | void> => {
-    let done = false;
-    let status: anchor.web3.SignatureStatus | null | void = {
-        slot: 0,
-        confirmations: 0,
-        err: null,
-    };
-    let subId = 0;
-    status = await new Promise(async (resolve, reject) => {
-        setTimeout(() => {
-            if (done) {
-                return;
-            }
-            done = true;
-            console.log("Rejecting for timeout...");
-            reject({ timeout: true });
-        }, timeout);
-        try {
-            subId = connection.onSignature(
-                txid,
-                (result: any, context: any) => {
-                    done = true;
-                    status = {
-                        err: result.err,
-                        slot: context.slot,
-                        confirmations: 0,
-                    };
-                    if (result.err) {
-                        console.log("Rejected via websocket", result.err);
-                        reject(status);
-                    } else {
-                        console.log("Resolved via websocket", result);
-                        resolve(status);
-                    }
-                },
-                commitment
-            );
-        } catch (e) {
-            done = true;
-            console.error("WS error in setup", txid, e);
-        }
-        while (!done && queryStatus) {
-            // eslint-disable-next-line no-loop-func
-            (async () => {
-                try {
-                    const signatureStatuses =
-                        await connection.getSignatureStatuses([txid]);
-                    status = signatureStatuses && signatureStatuses.value[0];
-                    if (!done) {
-                        if (!status) {
-                            console.log("REST null result for", txid, status);
-                        } else if (status.err) {
-                            console.log("REST error for", txid, status);
-                            done = true;
-                            reject(status.err);
-                        } else if (!status.confirmations) {
-                            console.log(
-                                "REST no confirmations for",
-                                txid,
-                                status
-                            );
-                        } else {
-                            console.log("REST confirmation for", txid, status);
-                            done = true;
-                            resolve(status);
-                        }
-                    }
-                } catch (e) {
-                    if (!done) {
-                        console.log("REST connection error: txid", txid, e);
-                    }
-                }
-            })();
-            await sleep(2000);
-        }
-    });
+function createMintCandyInstruction(
+    mintPublicKey: PublicKey,
+    mintTokenAddress: PublicKey,
+    payer: PublicKey,
+    paymentTokenAddress: PublicKey,
+) {
+    const dataLayout = BufferLayout.struct([
+        BufferLayout.u8('instruction'),
+        BufferLayout.blob(8, 'amount'),
+    ]);
 
-    //@ts-ignore
-    if (connection._signatureSubscriptions[subId]) {
-        connection.removeSignatureListener(subId);
-    }
-    done = true;
-    console.log("Returning status", status);
-    return status;
-};
+    const data = Buffer.alloc(dataLayout.span);
+
+    dataLayout.encode(
+        {
+            instruction: 7, // MintTo
+            amount: new u64(1).toBuffer(),
+        },
+        data,
+    );
+
+    const keys = [
+        {
+            pubkey: mintPublicKey,
+            isSigner: false,
+            isWritable: true,
+        },
+        {
+            pubkey: mintTokenAddress,
+            isSigner: false,
+            isWritable: true,
+        },
+        {
+            pubkey: payer,
+            isSigner: true,
+            isWritable: false,
+        },
+        {
+            pubkey: paymentTokenAddress,
+            isSigner: false,
+            isWritable: true,
+        },
+        {
+            pubkey: payer,
+            isSigner: false,
+            isWritable: false,
+        },
+    ];
+
+    return new TransactionInstruction({
+        keys,
+        programId: TOKEN_PROGRAM_ID,
+        data,
+    });
+}
+
+async function createAirdropInstruction(
+    tokenMintPublicKey: PublicKey,
+    associatedAddress: PublicKey,
+    faucetPublicKey: PublicKey,
+    faucetProgramId: PublicKey,
+) {
+    const programAddress = (await PublicKey.findProgramAddress([Buffer.from("faucet")], faucetProgramId))[0];
+
+    const keys = [
+        {
+            pubkey: programAddress,
+            isSigner: false,
+            isWritable: false,
+        },
+        {
+            pubkey: tokenMintPublicKey,
+            isSigner: false,
+            isWritable: true,
+        },
+        {
+            pubkey: associatedAddress,
+            isSigner: false,
+            isWritable: true,
+        },
+        {
+            pubkey: TOKEN_PROGRAM_ID,
+            isSigner: false,
+            isWritable: false,
+        },
+        {
+            pubkey: faucetPublicKey,
+            isSigner: false,
+            isWritable: false,
+        },
+    ];
+
+    return new TransactionInstruction({
+        programId: faucetProgramId,
+        data: Buffer.from([1, ...new BN(1).toArray("le", 8)]),
+        keys,
+    });
+}
+
+function createPaymentTokenAccountInstruction(
+    faucetProgramId: PublicKey,
+    tokenMintPublicKey: PublicKey,
+    payer: PublicKey,
+    associatedAddress: PublicKey,
+) {
+    return Token.createAssociatedTokenAccountInstruction(
+        SPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_ID,
+        TOKEN_PROGRAM_ID,
+        tokenMintPublicKey,
+        associatedAddress,
+        payer,
+        payer,
+    );
+}
 
 /* export */ const createAssociatedTokenAccountInstruction = (
     associatedTokenAddress: anchor.web3.PublicKey,
@@ -240,8 +276,11 @@ export const mintOneToken = async (
     candyMachine: CandyMachine,
     config: anchor.web3.PublicKey, // feels like this should be part of candyMachine?
     payer: anchor.web3.PublicKey,
-    treasury: anchor.web3.PublicKey
-): Promise<string> => {
+    treasury: anchor.web3.PublicKey,
+    faucetPublicKey: PublicKey,
+    faucetProgramId: PublicKey,
+    tokenMintPublicKey: PublicKey,
+): Promise<SignatureStatus | null> => {
     const mint = anchor.web3.Keypair.generate();
     const token = await getTokenWallet(payer, mint.publicKey);
     const { connection, program } = candyMachine;
@@ -252,7 +291,67 @@ export const mintOneToken = async (
         MintLayout.span
     );
 
-    return await program.rpc.mintNft({
+    /* Address to store the new payment token in for the user */
+    const associatedAddress = await getTokenWallet(payer, tokenMintPublicKey);
+
+    /* Create the token account for the SPL payment token */
+    const createTokenAccountInstruction = createPaymentTokenAccountInstruction(
+        faucetProgramId,
+        tokenMintPublicKey,
+        payer,
+        associatedAddress,
+    );
+
+    const airdropInstruction = await createAirdropInstruction(
+        tokenMintPublicKey,
+        associatedAddress,
+        faucetPublicKey,
+        faucetProgramId,
+    );
+    
+    const mintToInstruction = createMintCandyInstruction(
+        mint.publicKey,
+        token,
+        payer,
+        associatedAddress,
+    );
+
+    const accountInfo = await connection.getAccountInfo(
+        associatedAddress,
+    );
+
+    const instructions = [];
+
+    if (!accountInfo) {
+        instructions.push(createTokenAccountInstruction);
+    }
+
+    instructions.push(
+        anchor.web3.SystemProgram.createAccount({
+            fromPubkey: payer,
+            newAccountPubkey: mint.publicKey,
+            space: MintLayout.span,
+            lamports: rent,
+            programId: TOKEN_PROGRAM_ID,
+        }),
+        airdropInstruction,
+        Token.createInitMintInstruction(
+            TOKEN_PROGRAM_ID,
+            mint.publicKey,
+            0,
+            payer,
+            payer
+        ),
+        createAssociatedTokenAccountInstruction(
+            token,
+            payer,
+            payer,
+            mint.publicKey
+        ),
+        mintToInstruction,
+    );
+
+    const signature = await program.rpc.mintNft({
         accounts: {
             config,
             candyMachine: candyMachine.id,
@@ -270,37 +369,30 @@ export const mintOneToken = async (
             clock: anchor.web3.SYSVAR_CLOCK_PUBKEY,
         },
         signers: [mint],
-        instructions: [
-            anchor.web3.SystemProgram.createAccount({
-                fromPubkey: payer,
-                newAccountPubkey: mint.publicKey,
-                space: MintLayout.span,
-                lamports: rent,
-                programId: TOKEN_PROGRAM_ID,
-            }),
-            Token.createInitMintInstruction(
-                TOKEN_PROGRAM_ID,
-                mint.publicKey,
-                0,
-                payer,
-                payer
-            ),
-            createAssociatedTokenAccountInstruction(
-                token,
-                payer,
-                payer,
-                mint.publicKey
-            ),
-            Token.createMintToInstruction(
-                TOKEN_PROGRAM_ID,
-                mint.publicKey,
-                token,
-                payer,
-                [],
-                1
-            ),
+        instructions,
+        remainingAccounts: [
+            {
+                pubkey: associatedAddress,
+                isSigner: false,
+                isWritable: true,
+            },
+            {
+                pubkey: payer,
+                isSigner: false,
+                isWritable: false,
+            },
         ],
     });
+
+    while (true) {
+        const status = await connection.getSignatureStatuses([signature]);
+        
+        if (status === null) {
+            await sleep(2000);
+        } else {
+            return status.value[0];
+        }
+    }
 };
 
 export const shortenAddress = (address: string, chars = 4): string => {

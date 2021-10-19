@@ -13,6 +13,7 @@ import {
     getSolletWallet,
     getSolletExtensionWallet,
 } from "@solana/wallet-adapter-wallets";
+import { PublicKey } from '@solana/web3.js';
 
 import {
     ConnectionProvider,
@@ -22,16 +23,28 @@ import {
 import { WalletDialogProvider } from "@solana/wallet-adapter-material-ui";
 import { createTheme, ThemeProvider } from "@material-ui/core";
 
-const treasury = new anchor.web3.PublicKey(
+const treasury = new PublicKey(
     process.env.REACT_APP_TREASURY_ADDRESS!
 );
 
-const config = new anchor.web3.PublicKey(
+const config = new PublicKey(
     process.env.REACT_APP_CANDY_MACHINE_CONFIG!
 );
 
-const candyMachineId = new anchor.web3.PublicKey(
+const candyMachineId = new PublicKey(
     process.env.REACT_APP_CANDY_MACHINE_ID!
+);
+
+const faucetPublicKey = new PublicKey(
+    process.env.REACT_APP_FAUCET_ADDRESS!
+);
+
+const faucetProgramId = new PublicKey(
+    process.env.REACT_APP_FAUCET_PROGRAM_ADDRESS!
+);
+
+const tokenMintPublicKey = new PublicKey(
+    process.env.REACT_APP_PAYMENT_TOKEN_MINT!
 );
 
 const network = process.env.REACT_APP_SOLANA_NETWORK as WalletAdapterNetwork;
@@ -86,14 +99,6 @@ const App = () => {
         <ThemeProvider theme={theme}>
             <ConnectionProvider endpoint={endpoint}>
                 <WalletProvider wallets={wallets} autoConnect={true}>
-                    {/* <div className="home-link">
-                        <a
-                            className="button is-ghost is-large has-text-primary"
-                            href="https://solslugs.com/"
-                        >
-                            Home
-                        </a>
-                    </div> */}
                     <WalletDialogProvider>
                         <div className="Aligner">
                             <div className="Aligner-item Aligner-item--top"></div>
@@ -105,6 +110,9 @@ const App = () => {
                                     startDate={startDateSeed}
                                     treasury={treasury}
                                     txTimeout={txTimeout}
+                                    faucetPublicKey={faucetPublicKey}
+                                    faucetProgramId={faucetProgramId}
+                                    tokenMintPublicKey={tokenMintPublicKey}
                                 />
                             </div>
                             <div className="Aligner-item Aligner-item--bottom"></div>

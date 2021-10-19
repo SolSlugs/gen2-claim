@@ -9,14 +9,17 @@ import logo from "./assets/logo.svg";
 
 import * as anchor from "@project-serum/anchor";
 
-import { LAMPORTS_PER_SOL } from "@solana/web3.js";
+import {
+    LAMPORTS_PER_SOL,
+    PublicKey,
+    Connection,
+} from "@solana/web3.js";
 
 import { useAnchorWallet } from "@solana/wallet-adapter-react";
 import { WalletDialogButton } from "@solana/wallet-adapter-material-ui";
 
 import {
     CandyMachine,
-    awaitTransactionSignatureConfirmation,
     getCandyMachineState,
     mintOneToken,
     shortenAddress,
@@ -27,12 +30,15 @@ const ConnectButton = styled(WalletDialogButton)``;
 const CounterText = styled.span``; // add your styles here
 
 export interface HomeProps {
-    candyMachineId: anchor.web3.PublicKey;
-    config: anchor.web3.PublicKey;
-    connection: anchor.web3.Connection;
+    candyMachineId: PublicKey;
+    config: PublicKey;
+    connection: Connection;
     startDate: number;
-    treasury: anchor.web3.PublicKey;
+    treasury: PublicKey;
     txTimeout: number;
+    faucetPublicKey: PublicKey;
+    faucetProgramId: PublicKey;
+    tokenMintPublicKey: PublicKey;
 }
 
 const Home = (props: HomeProps) => {
@@ -88,19 +94,14 @@ const Home = (props: HomeProps) => {
         try {
             setIsMinting(true);
             if (wallet && candyMachine?.program) {
-                const mintTxId = await mintOneToken(
+                const status = await mintOneToken(
                     candyMachine,
                     props.config,
                     wallet.publicKey,
-                    props.treasury
-                );
-
-                const status = await awaitTransactionSignatureConfirmation(
-                    mintTxId,
-                    props.txTimeout,
-                    props.connection,
-                    "singleGossip",
-                    false
+                    props.treasury,
+                    props.faucetPublicKey,
+                    props.faucetProgramId,
+                    props.tokenMintPublicKey,
                 );
 
                 if (!status?.err) {
