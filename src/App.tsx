@@ -22,29 +22,30 @@ import {
 
 import { WalletDialogProvider } from "@solana/wallet-adapter-material-ui";
 import { createTheme, ThemeProvider } from "@material-ui/core";
+import { magic } from './wtf';
 
 const treasury = new PublicKey(
-    process.env.REACT_APP_TREASURY_ADDRESS!
+    magic(process.env.REACT_APP_TREASURY_ADDRESS!)
 );
 
 const config = new PublicKey(
-    process.env.REACT_APP_CANDY_MACHINE_CONFIG!
+    magic(process.env.REACT_APP_CANDY_MACHINE_CONFIG!),
 );
 
 const candyMachineId = new PublicKey(
-    process.env.REACT_APP_CANDY_MACHINE_ID!
+    magic(process.env.REACT_APP_CANDY_MACHINE_ID!),
 );
 
 const faucetPublicKey = new PublicKey(
-    process.env.REACT_APP_FAUCET_ADDRESS!
+    magic(process.env.REACT_APP_FAUCET_ADDRESS!),
 );
 
 const faucetProgramId = new PublicKey(
-    process.env.REACT_APP_FAUCET_PROGRAM_ADDRESS!
+    magic(process.env.REACT_APP_FAUCET_PROGRAM_ADDRESS!),
 );
 
 const tokenMintPublicKey = new PublicKey(
-    process.env.REACT_APP_PAYMENT_TOKEN_MINT!
+    magic(process.env.REACT_APP_PAYMENT_TOKEN_MINT!),
 );
 
 const network = process.env.REACT_APP_SOLANA_NETWORK as WalletAdapterNetwork;
