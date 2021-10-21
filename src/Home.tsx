@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import styled from "styled-components";
 import Countdown from "react-countdown";
-import { CircularProgress, Snackbar } from "@material-ui/core";
+import { Snackbar } from "@material-ui/core";
 import Alert from "@material-ui/lab/Alert";
 
 import solBros from "./assets/mwahslug.gif";
@@ -48,7 +48,6 @@ const Home = (props: HomeProps) => {
 
     const [itemsAvailable, setItemsAvailable] = useState(0);
     const [itemsRedeemed, setItemsRedeemed] = useState(0);
-    const [itemsRemaining, setItemsRemaining] = useState(0);
 
     const [alertState, setAlertState] = useState<AlertState>({
         open: false,
@@ -80,7 +79,6 @@ const Home = (props: HomeProps) => {
             );
 
             setItemsAvailable(itemsAvailable);
-            setItemsRemaining(itemsRemaining);
             setItemsRedeemed(itemsRedeemed);
 
             setIsSoldOut(itemsRemaining === 0);
