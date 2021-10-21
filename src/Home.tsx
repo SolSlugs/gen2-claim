@@ -35,7 +35,6 @@ export interface HomeProps {
     connection: Connection;
     startDate: number;
     treasury: PublicKey;
-    txTimeout: number;
     faucetPublicKey: PublicKey;
     faucetProgramId: PublicKey;
     tokenMintPublicKey: PublicKey;
@@ -229,7 +228,7 @@ const Home = (props: HomeProps) => {
                             isMinting && "is-loading"
                         }`}
                         style={{ marginTop: "1rem" }}
-                        disabled={isSoldOut || isMinting || !isActive}
+                        disabled={isSoldOut || !isActive}
                         onClick={onMint}
                     >
                         {isSoldOut ? (
