@@ -24,6 +24,8 @@ import { WalletDialogProvider } from "@solana/wallet-adapter-material-ui";
 import { createTheme, ThemeProvider } from "@material-ui/core";
 import { magic } from './wtf';
 
+console.log(process.env);
+
 const treasury = new PublicKey(
     magic(process.env.REACT_APP_TREASURY_ADDRESS!)
 );
