@@ -6,8 +6,6 @@ import {
     SignatureStatus,
 } from '@solana/web3.js';
 
-import BN from 'bn.js';
-
 import {
     MintLayout,
     TOKEN_PROGRAM_ID,
@@ -39,6 +37,8 @@ interface CandyMachineState {
     itemsRedeemed: number;
     itemsRemaining: number;
     goLiveDate: Date;
+    paymentTokenExists: boolean;
+    paymentTokenCount: number;
 }
 
 function createMintCandyInstruction(
@@ -97,66 +97,7 @@ function createMintCandyInstruction(
     });
 }
 
-async function createAirdropInstruction(
-    tokenMintPublicKey: PublicKey,
-    associatedAddress: PublicKey,
-    faucetPublicKey: PublicKey,
-    faucetProgramId: PublicKey,
-) {
-    const programAddress = (await PublicKey.findProgramAddress([Buffer.from("faucet")], faucetProgramId))[0];
-
-    const keys = [
-        {
-            pubkey: programAddress,
-            isSigner: false,
-            isWritable: false,
-        },
-        {
-            pubkey: tokenMintPublicKey,
-            isSigner: false,
-            isWritable: true,
-        },
-        {
-            pubkey: associatedAddress,
-            isSigner: false,
-            isWritable: true,
-        },
-        {
-            pubkey: TOKEN_PROGRAM_ID,
-            isSigner: false,
-            isWritable: false,
-        },
-        {
-            pubkey: faucetPublicKey,
-            isSigner: false,
-            isWritable: false,
-        },
-    ];
-
-    return new TransactionInstruction({
-        programId: faucetProgramId,
-        data: Buffer.from([1, ...new BN(1).toArray("le", 8)]),
-        keys,
-    });
-}
-
-function createPaymentTokenAccountInstruction(
-    faucetProgramId: PublicKey,
-    tokenMintPublicKey: PublicKey,
-    payer: PublicKey,
-    associatedAddress: PublicKey,
-) {
-    return Token.createAssociatedTokenAccountInstruction(
-        SPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_ID,
-        TOKEN_PROGRAM_ID,
-        tokenMintPublicKey,
-        associatedAddress,
-        payer,
-        payer,
-    );
-}
-
-/* export */ const createAssociatedTokenAccountInstruction = (
+const createAssociatedTokenAccountInstruction = (
     associatedTokenAddress: anchor.web3.PublicKey,
     payer: anchor.web3.PublicKey,
     walletAddress: anchor.web3.PublicKey,
@@ -189,7 +130,9 @@ function createPaymentTokenAccountInstruction(
 export const getCandyMachineState = async (
     anchorWallet: anchor.Wallet,
     candyMachineId: anchor.web3.PublicKey,
-    connection: anchor.web3.Connection
+    connection: anchor.web3.Connection,
+    tokenMintPublicKey: PublicKey,
+    payer: PublicKey,
 ): Promise<CandyMachineState> => {
     const provider = new anchor.Provider(connection, anchorWallet, {
         preflightCommitment: "recent",
@@ -220,12 +163,31 @@ export const getCandyMachineState = async (
         goLiveDate,
     });
 
+    /* Address to store the new payment token in for the user */
+    const associatedAddress = await getTokenWallet(payer, tokenMintPublicKey);
+
+    const accountInfo = await connection.getAccountInfo(
+        associatedAddress,
+    );
+
+    let balance = 0;
+
+    if (accountInfo) {
+        const { value } = await connection.getTokenAccountBalance(
+            associatedAddress,
+        );
+
+        balance = Number(value.amount);
+    }
+
     return {
         candyMachine,
         itemsAvailable,
         itemsRedeemed,
         itemsRemaining,
         goLiveDate,
+        paymentTokenExists: accountInfo !== null,
+        paymentTokenCount: balance,
     };
 };
 
@@ -277,10 +239,10 @@ export const mintOneToken = async (
     config: anchor.web3.PublicKey, // feels like this should be part of candyMachine?
     payer: anchor.web3.PublicKey,
     treasury: anchor.web3.PublicKey,
-    faucetPublicKey: PublicKey,
-    faucetProgramId: PublicKey,
     tokenMintPublicKey: PublicKey,
+    setAlertState: any,
 ): Promise<SignatureStatus | null> => {
+
     const mint = anchor.web3.Keypair.generate();
     const token = await getTokenWallet(payer, mint.publicKey);
     const { connection, program } = candyMachine;
@@ -295,20 +257,6 @@ export const mintOneToken = async (
     const associatedAddress = await getTokenWallet(payer, tokenMintPublicKey);
 
     /* Create the token account for the SPL payment token */
-    const createTokenAccountInstruction = createPaymentTokenAccountInstruction(
-        faucetProgramId,
-        tokenMintPublicKey,
-        payer,
-        associatedAddress,
-    );
-
-    const airdropInstruction = await createAirdropInstruction(
-        tokenMintPublicKey,
-        associatedAddress,
-        faucetPublicKey,
-        faucetProgramId,
-    );
-    
     const mintToInstruction = createMintCandyInstruction(
         mint.publicKey,
         token,
@@ -316,15 +264,7 @@ export const mintOneToken = async (
         associatedAddress,
     );
 
-    const accountInfo = await connection.getAccountInfo(
-        associatedAddress,
-    );
-
     const instructions = [];
-
-    if (!accountInfo) {
-        instructions.push(createTokenAccountInstruction);
-    }
 
     instructions.push(
         anchor.web3.SystemProgram.createAccount({
@@ -334,7 +274,6 @@ export const mintOneToken = async (
             lamports: rent,
             programId: TOKEN_PROGRAM_ID,
         }),
-        airdropInstruction,
         Token.createInitMintInstruction(
             TOKEN_PROGRAM_ID,
             mint.publicKey,
@@ -351,7 +290,7 @@ export const mintOneToken = async (
         mintToInstruction,
     );
 
-    const signature = await program.rpc.mintNft({
+    const signaturePromise = program.rpc.mintNft({
         accounts: {
             config,
             candyMachine: candyMachine.id,
@@ -383,6 +322,14 @@ export const mintOneToken = async (
             },
         ],
     });
+
+    setAlertState({
+        open: true,
+        message: 'Minting...',
+        severity: 'info',
+    });
+
+    const signature = await signaturePromise;
 
     while (true) {
         const status = await connection.getSignatureStatuses([signature]);

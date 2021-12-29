@@ -1,4 +1,3 @@
-import "./App.global.scss";
 import { useMemo } from "react";
 
 import Home from "./Home";
@@ -22,30 +21,21 @@ import {
 
 import { WalletDialogProvider } from "@solana/wallet-adapter-material-ui";
 import { createTheme, ThemeProvider } from "@material-ui/core";
-import { magic } from './wtf';
 
 const treasury = new PublicKey(
-    magic(process.env.REACT_APP_TREASURY_ADDRESS!)
+    process.env.REACT_APP_TREASURY_ADDRESS!
 );
 
 const config = new PublicKey(
-    magic(process.env.REACT_APP_CANDY_MACHINE_CONFIG!),
+    process.env.REACT_APP_CANDY_MACHINE_CONFIG!
 );
 
 const candyMachineId = new PublicKey(
-    magic(process.env.REACT_APP_CANDY_MACHINE_ID!),
-);
-
-const faucetPublicKey = new PublicKey(
-    magic(process.env.REACT_APP_FAUCET_ADDRESS!),
-);
-
-const faucetProgramId = new PublicKey(
-    magic(process.env.REACT_APP_FAUCET_PROGRAM_ADDRESS!),
+    process.env.REACT_APP_CANDY_MACHINE_ID!
 );
 
 const tokenMintPublicKey = new PublicKey(
-    magic(process.env.REACT_APP_PAYMENT_TOKEN_MINT!),
+    process.env.REACT_APP_PAYMENT_TOKEN_MINT!
 );
 
 const network = process.env.REACT_APP_SOLANA_NETWORK as WalletAdapterNetwork;
@@ -108,8 +98,6 @@ const App = () => {
                                     connection={connection}
                                     startDate={startDateSeed}
                                     treasury={treasury}
-                                    faucetPublicKey={faucetPublicKey}
-                                    faucetProgramId={faucetProgramId}
                                     tokenMintPublicKey={tokenMintPublicKey}
                                 />
                             </div>

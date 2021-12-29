@@ -3,21 +3,16 @@ import styled from "styled-components";
 import Countdown from "react-countdown";
 import { Snackbar } from "@material-ui/core";
 import Alert from "@material-ui/lab/Alert";
-
-import solBros from "./assets/mwahslug.gif";
-import logo from "./assets/logo.svg";
-
 import * as anchor from "@project-serum/anchor";
-
 import {
     LAMPORTS_PER_SOL,
     PublicKey,
     Connection,
 } from "@solana/web3.js";
-
 import { useAnchorWallet } from "@solana/wallet-adapter-react";
-import { WalletDialogButton } from "@solana/wallet-adapter-material-ui";
+import { WalletMultiButton } from "@solana/wallet-adapter-material-ui";
 
+import gen2 from './assets/gen2.png';
 import {
     CandyMachine,
     getCandyMachineState,
@@ -25,7 +20,17 @@ import {
     shortenAddress,
 } from "./candy-machine";
 
-const ConnectButton = styled(WalletDialogButton)``;
+const ConnectButton = styled(WalletMultiButton)`
+    background-color: #c5f1ff !important;
+    color: #3e3e3e !important;
+    font-size: 30px !important;
+`;
+
+const DisconnectButton = styled(WalletMultiButton)`
+    background-color: #c5f1ff !important;
+    color: #3e3e3e !important;
+    font-size: 20px !important;
+`;
 
 const CounterText = styled.span``; // add your styles here
 
@@ -35,19 +40,26 @@ export interface HomeProps {
     connection: Connection;
     startDate: number;
     treasury: PublicKey;
-    faucetPublicKey: PublicKey;
-    faucetProgramId: PublicKey;
     tokenMintPublicKey: PublicKey;
 }
 
+const Item = (props: any) => {
+  return (
+      <span style={{
+          marginTop: '10px',
+          ...props.style,
+      }}>
+          {props.children}
+      </span>
+  );
+}
+
 const Home = (props: HomeProps) => {
-    const [balance, setBalance] = useState<number>();
     const [isActive, setIsActive] = useState(false); // true when countdown completes
     const [isSoldOut, setIsSoldOut] = useState(false); // true when items remaining is zero
-    const [isMinting, setIsMinting] = useState(false); // true when user got to press MINT
 
-    const [itemsAvailable, setItemsAvailable] = useState(0);
-    const [itemsRedeemed, setItemsRedeemed] = useState(0);
+    const [paymentTokenExists, setPaymentTokenExists] = useState(false);
+    const [paymentTokenCount, setPaymentTokenCount] = useState(0);
 
     const [alertState, setAlertState] = useState<AlertState>({
         open: false,
@@ -69,36 +81,38 @@ const Home = (props: HomeProps) => {
             const {
                 candyMachine,
                 goLiveDate,
-                itemsAvailable,
                 itemsRemaining,
-                itemsRedeemed,
+                paymentTokenExists,
+                paymentTokenCount,
             } = await getCandyMachineState(
                 wallet as anchor.Wallet,
                 props.candyMachineId,
-                props.connection
+                props.connection,
+                props.tokenMintPublicKey,
+                wallet.publicKey,
             );
-
-            setItemsAvailable(itemsAvailable);
-            setItemsRedeemed(itemsRedeemed);
 
             setIsSoldOut(itemsRemaining === 0);
             setStartDate(goLiveDate);
+
+            setPaymentTokenExists(paymentTokenExists);
+            setPaymentTokenCount(paymentTokenCount);
+
             setCandyMachine(candyMachine);
         })();
     };
 
     const onMint = async () => {
         try {
-            setIsMinting(true);
             if (wallet && candyMachine?.program) {
+                
                 const status = await mintOneToken(
                     candyMachine,
                     props.config,
                     wallet.publicKey,
                     props.treasury,
-                    props.faucetPublicKey,
-                    props.faucetProgramId,
                     props.tokenMintPublicKey,
+                    setAlertState,
                 );
 
                 if (!status?.err) {
@@ -140,110 +154,151 @@ const Home = (props: HomeProps) => {
                 severity: "error",
             });
         } finally {
-            if (wallet) {
-                const balance = await props.connection.getBalance(
-                    wallet.publicKey
-                );
-                setBalance(balance / LAMPORTS_PER_SOL);
-            }
-            setIsMinting(false);
             refreshCandyMachineState();
         }
     };
-
-    useEffect(() => {
-        (async () => {
-            if (wallet) {
-                const balance = await props.connection.getBalance(
-                    wallet.publicKey
-                );
-                setBalance(balance / LAMPORTS_PER_SOL);
-            }
-        })();
-    }, [wallet, props.connection]);
 
     useEffect(refreshCandyMachineState, [
         wallet,
         props.candyMachineId,
         props.connection,
+        props.tokenMintPublicKey,
     ]);
 
     return (
         <main>
+            <img
+                src={gen2}
+                style={{
+                    position: 'fixed',
+                    bottom: '20px',
+                    left: '20px',
+                    width: '400px',
+                    height: '400px',
+                }}
+            />
             <div
                 className="mint-container"
-                style={{ backgroundImage: `url(${solBros})` }}
             >
-                <img alt="solslugs logo" className="logo" src={logo} />
+                {wallet && (
+                    <>
+                                                
+                        {paymentTokenExists && (
+                            <>
+                                <div style={{ display: 'flex', width: '90%', justifyContent: 'space-between', fontSize: '28px' }}>
+                                    <Item>
+                                        Wallet: {shortenAddress(wallet.publicKey.toBase58() || "")}
+                                    </Item>
 
-                {/* WALLET CONNECTED */}
-                {wallet && (
-                    <p
-                        className="has-text-white is-size-4"
-                        style={{ clear: "right" }}
-                    >
-                        Wallet{" "}
-                        {shortenAddress(wallet.publicKey.toBase58() || "")}
-                    </p>
-                )}
-                {wallet && (
-                    <p className="has-text-white is-size-4">
-                        Balance: {(balance || 0).toLocaleString()} SOL
-                    </p>
-                )}
-                {wallet && (
-                    <p className="has-text-white is-size-4">
-                        Minted: {itemsRedeemed}/{itemsAvailable}
-                    </p>
-                )}
+                                    <Item>
+                                        Mint Cost: Free!
+                                    </Item>
+                                </div>
 
-                {/* NO WALLET */}
-                {!wallet && (
-                    <p
-                        className="has-text-white is-size-4"
-                        style={{ clear: "right" }}
-                    >
-                        Mint Price: FREE
-                    </p>
-                )}
-                {!wallet && (
-                    <p className="has-text-white is-size-4">
-                        Total Supply: 10000
-                    </p>
-                )}
-                {!wallet && <p className="has-text-white is-size-4">&nbsp;</p>}
-                {!wallet ? (
-                    <ConnectButton
-                        style={{ marginTop: "1rem" }}
-                        className="button is-primary is-normal"
-                        color="primary"
-                    >
-                        Connect Wallet
-                    </ConnectButton>
-                ) : (
-                    <button
-                        className={`button is-primary ${
-                            isMinting && "is-loading"
-                        }`}
-                        style={{ marginTop: "1rem" }}
-                        disabled={isSoldOut || !isActive}
-                        onClick={onMint}
-                    >
-                        {isSoldOut ? (
-                            "SOLD OUT"
-                        ) : isActive ? (
-                            "MINT"
-                        ) : (
-                            <Countdown
-                                date={startDate}
-                                onMount={({ completed }) =>
-                                    completed && setIsActive(true)
-                                }
-                                onComplete={() => setIsActive(true)}
-                                renderer={renderCounter}
-                            />
+                                <div style={{ flexDirection: 'column', display: 'flex', alignItems: 'center', marginTop: '40px' }}>
+                                    {paymentTokenCount === 0 && (
+                                        <>
+                                            <Item>Congratulations, you have claimed all your generation 2 slugs!</Item>
+
+                                            <DisconnectButton
+                                                style={{ marginTop: '30px' }}
+                                                className="button is-primary is-normal"
+                                            >
+                                                Disconnect Wallet
+                                            </DisconnectButton>
+                                        </>
+                                    )}
+
+                                    {paymentTokenCount > 0 && (
+                                        <>
+                                            <Item style={{ fontSize: '30px' }}>
+                                                {`You can claim ${paymentTokenCount} generation 2 slug${paymentTokenCount === 1 ? '' : 's'}!`}
+                                            </Item>
+
+                                            <button
+                                                style={{
+                                                    marginTop: '30px',
+                                                    width: '150px',
+                                                    fontSize: '30px',
+                                                    padding: '10px',
+                                                    border: 'none',
+                                                    borderRadius: '4px',
+                                                    backgroundColor: '#c5f1ff',
+                                                    color: '#3e3e3e',
+                                                }}
+                                                disabled={isSoldOut || !isActive}
+                                                onClick={onMint}
+                                            >
+                                                {isSoldOut ? (
+                                                    "SOLD OUT"
+                                                ) : isActive ? (
+                                                    "MINT"
+                                                ) : (
+                                                    <Countdown
+                                                        date={startDate}
+                                                        onMount={({ completed }) =>
+                                                            completed && setIsActive(true)
+                                                        }
+                                                        onComplete={() => setIsActive(true)}
+                                                        renderer={renderCounter}
+                                                    />
+                                                )}
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+                            </>
                         )}
-                    </button>
+
+                        {candyMachine && !paymentTokenExists && (
+                            <>
+                                <div style={{ display: 'flex', width: '90%', justifyContent: 'space-between', fontSize: '28px' }}>
+                                    <Item>
+
+                                        Wallet: {shortenAddress(wallet.publicKey.toBase58() || "")}
+                                    </Item>
+
+                                    <Item>
+                                        Mint Cost: Free!
+                                    </Item>
+                                </div>
+
+                                <Item style={{ marginTop: '60px', width: '600px' }}>
+                                    You are not eligible for any generation 2 slugs. Please verify you have the correct wallet address connected.
+                                </Item>
+
+                                <Item style={{ marginTop: '40px', width: '600px' }}>
+                                    Generation 2 slugs were rewarded to users who burnt two or more generation 1 slugs.
+                                </Item>
+
+                                <DisconnectButton
+                                    style={{ marginTop: '30px' }}
+                                    className="button is-primary is-normal"
+                                    color="primary"
+                                >
+                                    Disconnect Wallet
+                                </DisconnectButton>
+
+                                <a href="https://solslugs.com/#/gen2" style={{ color: '#383838', marginTop: '30px' }}>
+                                    Verify Eligibility
+                                </a>
+                            </>
+                        )}
+                    </>
+                )}
+
+                {!wallet && (
+                    <>
+                        <p
+                        >
+                            Mint a Generation 2 Sol Slug
+                        </p>
+
+                        <ConnectButton
+                            style={{ marginTop: "1rem" }}
+                            className="button is-primary is-normal"
+                        />
+                    </>
                 )}
             </div>
 
@@ -265,7 +320,7 @@ const Home = (props: HomeProps) => {
     );
 };
 
-interface AlertState {
+export interface AlertState {
     open: boolean;
     message: string;
     severity: "success" | "info" | "warning" | "error" | undefined;
