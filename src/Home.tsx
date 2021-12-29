@@ -57,6 +57,7 @@ const Item = (props: any) => {
 const Home = (props: HomeProps) => {
     const [isActive, setIsActive] = useState(false); // true when countdown completes
     const [isSoldOut, setIsSoldOut] = useState(false); // true when items remaining is zero
+    const [isMinting, setIsMinting] = useState(false);
 
     const [paymentTokenExists, setPaymentTokenExists] = useState(false);
     const [paymentTokenCount, setPaymentTokenCount] = useState(0);
@@ -104,6 +105,7 @@ const Home = (props: HomeProps) => {
 
     const onMint = async () => {
         try {
+            setIsMinting(true);
             if (wallet && candyMachine?.program) {
                 
                 const status = await mintOneToken(
@@ -154,6 +156,7 @@ const Home = (props: HomeProps) => {
                 severity: "error",
             });
         } finally {
+            setIsMinting(false);
             refreshCandyMachineState();
         }
     };
@@ -198,7 +201,9 @@ const Home = (props: HomeProps) => {
                                 <div style={{ flexDirection: 'column', display: 'flex', alignItems: 'center', marginTop: '40px' }}>
                                     {paymentTokenCount === 0 && (
                                         <>
-                                            <Item>Congratulations, you have claimed all your generation 2 slugs!</Item>
+                                            <Item style={{ fontSize: '30px' }}>
+                                                Congratulations, you have claimed all your generation 2 slugs!
+                                            </Item>
 
                                             <DisconnectButton
                                                 style={{ marginTop: '30px' }}
@@ -218,21 +223,22 @@ const Home = (props: HomeProps) => {
                                             <button
                                                 style={{
                                                     marginTop: '30px',
-                                                    width: '150px',
                                                     fontSize: '30px',
                                                     padding: '10px',
+                                                    paddingLeft: '20px',
+                                                    paddingRight: '20px',
                                                     border: 'none',
                                                     borderRadius: '4px',
                                                     backgroundColor: '#c5f1ff',
                                                     color: '#3e3e3e',
                                                 }}
-                                                disabled={isSoldOut || !isActive}
+                                                disabled={isSoldOut || !isActive || isMinting}
                                                 onClick={onMint}
                                             >
                                                 {isSoldOut ? (
                                                     "SOLD OUT"
                                                 ) : isActive ? (
-                                                    "MINT"
+                                                    isMinting ? 'MINTING...' : 'MINT'
                                                 ) : (
                                                     <Countdown
                                                         date={startDate}
@@ -289,9 +295,8 @@ const Home = (props: HomeProps) => {
 
                 {!wallet && (
                     <>
-                        <p
-                        >
-                            Mint a Generation 2 Sol Slug
+                        <p>
+                            Connect your wallet to mint a generation 2 Sol Slug!
                         </p>
 
                         <ConnectButton
