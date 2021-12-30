@@ -23,27 +23,26 @@ import { WalletDialogProvider } from "@solana/wallet-adapter-material-ui";
 import { createTheme, ThemeProvider } from "@material-ui/core";
 
 const treasury = new PublicKey(
-    process.env.REACT_APP_TREASURY_ADDRESS!
+    'BnyR8w8JaHugASzoiwsydhdDKS6VZyujxQcTgryPGhis',
 );
 
 const config = new PublicKey(
-    process.env.REACT_APP_CANDY_MACHINE_CONFIG!
+    '7WTEyfMay4mb2Drr1csrkxGFpanXjCzHf64obfPcDRWQ'
 );
 
 const candyMachineId = new PublicKey(
-    process.env.REACT_APP_CANDY_MACHINE_ID!
+    '6ebgTh2HpFH3WvUxjSPRcUE6siRvD9Fx7zUwAnDKjUBs'
 );
 
 const tokenMintPublicKey = new PublicKey(
-    process.env.REACT_APP_PAYMENT_TOKEN_MINT!
+    'gen2VK2sZstCfzsbN7rGiMCoe4WuMS9JwLiJNTn4cEy'
 );
 
-const network = process.env.REACT_APP_SOLANA_NETWORK as WalletAdapterNetwork;
+const network = 'mainnet-beta' as WalletAdapterNetwork;
 
-const rpcHost = process.env.REACT_APP_SOLANA_RPC_HOST!;
+const rpcHost = 'https://spring-crimson-shape.solana-mainnet.quiknode.pro/101d753db4b4b167756067e5dbeabb4fad28adb3/';
 const connection = new anchor.web3.Connection(rpcHost);
-
-const startDateSeed = parseInt(process.env.REACT_APP_CANDY_START_DATE!, 10);
+const startDateSeed = 1577836800;
 
 const theme = createTheme({
     palette: {
