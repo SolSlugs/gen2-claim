@@ -5,7 +5,6 @@ import { Snackbar } from "@material-ui/core";
 import Alert from "@material-ui/lab/Alert";
 import * as anchor from "@project-serum/anchor";
 import {
-    LAMPORTS_PER_SOL,
     PublicKey,
     Connection,
 } from "@solana/web3.js";
@@ -172,6 +171,7 @@ const Home = (props: HomeProps) => {
         <main>
             <img
                 src={gen2}
+                alt='gen2slug'
                 style={{
                     position: 'fixed',
                     bottom: '20px',
